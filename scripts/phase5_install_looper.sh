@@ -19,7 +19,7 @@ MEDIA_DIR="${MEDIA_DIR:-/media/videos}"
 WORKERS="${WORKERS:-}"
 CONTROLLER_ADDR="${CONTROLLER_ADDR:-192.168.0.21:6001}"
 RC_PORT="${RC_PORT:-6001}"
-VLC_FLAGS="${VLC_FLAGS:---no-video-title-show --fullscreen}"
+VLC_FLAGS="${VLC_FLAGS:---extraintf rc --no-video-title-show --fullscreen}"
 DISPLAY_ENV="${DISPLAY_ENV:-:0}"
 AUTOSTART_FILE="${AUTOSTART_FILE:-/home/$TARGET_USER/.config/autostart/vlc-loop.desktop}"
 

@@ -115,6 +115,7 @@ Ask the human reviewer to sign off on the above spec before encoding new media.
         WORKERS= \
         ./scripts/phase5_install_looper.sh
    ```
+   The helper automatically adds `--extraintf rc` in the VLC flags so each worker exposes the telnet control port; keep that flag in place if you edit the config manually.
 3. **Validation** – reboot each Pi and run `journalctl -u vlc_sync_video_looper -f` to confirm VLC launches under systemd. The desktop autostart file should no longer exist.
 
 ---
