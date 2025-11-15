@@ -102,12 +102,19 @@ Ask the human reviewer to sign off on the above spec before encoding new media.
    ```bash
    sudo MODE=controller \
         VIDEO_FILE=compress-front.mp4 \
-        WORKERS=192.168.50.22:6001,192.168.50.23:6001,192.168.50.24:6001 \
-        CONTROLLER=192.168.50.21:6001 \
+        WORKERS=192.168.0.4:6001 \
+        CONTROLLER_ADDR=192.168.0.9:6001 \
         ./scripts/phase5_install_looper.sh
    ```
-   - Installs prerequisites, clones the looper via SSH, executes its installer, writes `/media/videos/video_looper.conf`, removes the Phase 3 autostart file, and enables the `vlc_sync_video_looper.service`.
-2. **Configure workers** – rerun the script on each worker Pi with `MODE=worker`, `VIDEO_FILE` set to that Pi’s clip (e.g., `compress-back.mp4`, `predict-front.mp4`, etc.), and `CONTROLLER=192.168.50.21:6001`. Workers can omit the `WORKERS` env var.
+   - Installs prerequisites, clones the looper via SSH, executes its installer, writes `/media/videos/video_looper.conf`, removes the Phase 3 autostart file, and enables the `vlc_sync_video_looper.service`. Override `WORKERS`/`CONTROLLER_ADDR` with the addresses for your current network; include only the workers that are actually online while testing.
+2. **Configure workers** – rerun the script on each worker Pi with `MODE=worker`, `VIDEO_FILE` set to that Pi’s clip (e.g., `compress-back.mp4`, `predict-front.mp4`, etc.), `CONTROLLER_ADDR=<controller-ip>:6001`, and `WORKERS=` (leave blank). Example:
+   ```bash
+   sudo MODE=worker \
+        VIDEO_FILE=compress-back.mp4 \
+        CONTROLLER_ADDR=192.168.0.9:6001 \
+        WORKERS= \
+        ./scripts/phase5_install_looper.sh
+   ```
 3. **Validation** – reboot each Pi and run `journalctl -u vlc_sync_video_looper -f` to confirm VLC launches under systemd. The desktop autostart file should no longer exist.
 
 ---
