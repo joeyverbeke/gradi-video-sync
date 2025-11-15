@@ -98,33 +98,17 @@ Ask the human reviewer to sign off on the above spec before encoding new media.
 
 ## Phase 5 – Introduce VLC Sync Video Looper
 
-1. **Install**:
+1. **Run the helper** (controller example):
    ```bash
-   sudo apt install -y git python3-venv
-   sudo mkdir -p /opt/vlc_sync_video_looper
-   sudo git clone git@github.com:dreerr/vlc_sync_video_looper.git /opt/vlc_sync_video_looper
-   cd /opt/vlc_sync_video_looper && sudo ./install.sh
+   sudo MODE=controller \
+        VIDEO_FILE=compress-front.mp4 \
+        WORKERS=192.168.50.22:6001,192.168.50.23:6001,192.168.50.24:6001 \
+        CONTROLLER=192.168.50.21:6001 \
+        ./scripts/phase5_install_looper.sh
    ```
-   This drops `vlc_sync_video_looper.service`.
-2. **Config** – `/media/videos/video_looper.conf` (controller local-only mode):
-   ```ini
-   [GENERAL]
-   MODE=controller
-   MEDIA_DIR=/media/videos
-   VIDEO_FILE=front_a.mp4
-   SCREEN=0
-   STARTUP_DELAY=2
-
-   [NETWORK]
-   WORKERS=
-   BROADCAST_PORT=5000
-
-   [VLC]
-   EXTRA_OPTS=--no-video-title-show --fullscreen
-   ```
-3. **Enable service** – `sudo systemctl enable --now vlc_sync_video_looper.service`
-4. **Disable autostart** – remove `vlc-loop.desktop`.
-5. Human reboot confirms service brings up VLC automatically.
+   - Installs prerequisites, clones the looper via SSH, executes its installer, writes `/media/videos/video_looper.conf`, removes the Phase 3 autostart file, and enables the `vlc_sync_video_looper.service`.
+2. **Configure workers** – rerun the script on each worker Pi with `MODE=worker`, `VIDEO_FILE` set to that Pi’s clip (e.g., `compress-back.mp4`, `predict-front.mp4`, etc.), and `CONTROLLER=192.168.50.21:6001`. Workers can omit the `WORKERS` env var.
+3. **Validation** – reboot each Pi and run `journalctl -u vlc_sync_video_looper -f` to confirm VLC launches under systemd. The desktop autostart file should no longer exist.
 
 ---
 
