@@ -102,7 +102,7 @@ Ask the human reviewer to sign off on the above spec before encoding new media.
    ```bash
    sudo apt install -y git python3-venv
    sudo mkdir -p /opt/vlc_sync_video_looper
-   sudo git clone https://github.com/jensee-gmbh/vlc_sync_video_looper.git /opt/vlc_sync_video_looper
+   sudo git clone git@github.com:dreerr/vlc_sync_video_looper.git /opt/vlc_sync_video_looper
    cd /opt/vlc_sync_video_looper && sudo ./install.sh
    ```
    This drops `vlc_sync_video_looper.service`.

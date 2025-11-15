@@ -36,13 +36,17 @@ chown "$TARGET_USER":"$TARGET_USER" "$MOUNT_POINT"
 
 if ! grep -q "$MOUNT_POINT" /etc/fstab; then
   log "Adding entry to /etc/fstab"
-  echo "UUID=$UUID  $MOUNT_POINT  $FSTYPE  defaults,uid=$(id -u "$TARGET_USER"),gid=$(id -g "$TARGET_USER"),fmask=0022,dmask=0022  0  2" >> /etc/fstab
+  if [[ "$FSTYPE" == "ext4" ]]; then
+    echo "UUID=$UUID  $MOUNT_POINT  $FSTYPE  defaults  0  2" >> /etc/fstab
+  else
+    echo "UUID=$UUID  $MOUNT_POINT  $FSTYPE  defaults,uid=$(id -u \"$TARGET_USER\"),gid=$(id -g \"$TARGET_USER\"),fmask=0022,dmask=0022  0  2" >> /etc/fstab
+  fi
 else
   log "fstab already contains $MOUNT_POINT entry; skipping"
 fi
 
 log "Mounting $MOUNT_POINT"
-mount "$MOUNT_POINT"
+mount "$MOUNT_POINT" || (systemctl daemon-reload && mount "$MOUNT_POINT")
 
 log "Copying any existing demo asset into $MOUNT_POINT"
 if [[ -f "$VIDEO_FILE" ]]; then
