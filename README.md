@@ -24,11 +24,11 @@ Back screens (HDMI 1, RC port 5002):
 sudo ./scripts/install_worker_back.sh
 ```
 
-Run both commands on dual-screen Pis (e.g., `gradi-compress`). Each script honors env overrides:
+Run both commands on dual-screen Pis (e.g., `gradi-compress`). Each script honors env overrides (the back helper adds `--no-audio` by default):
 
 ```bash
 sudo MEDIA_FRONT=/media/videos/custom_front.mp4 RUN_USER=pi ./scripts/install_worker_front.sh
-sudo MEDIA_BACK=/media/videos/custom_back.mp4 RUN_USER=pi ./scripts/install_worker_back.sh
+sudo MEDIA_BACK=/media/videos/custom_back.mp4 SCREEN1_EXTRA_ARGS="" RUN_USER=pi ./scripts/install_worker_back.sh
 ```
 
 Reboot and confirm the RC ports are listening:

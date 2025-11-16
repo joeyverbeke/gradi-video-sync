@@ -37,11 +37,11 @@ sudo ./scripts/install_worker_front.sh   # HDMI 0 / front.mp4 / port 5001
 sudo ./scripts/install_worker_back.sh    # HDMI 1 / back.mp4 / port 5002
 ```
 
-Each helper honors optional env overrides if you need a different filename, screen index, RC port, or run user:
+Each helper honors optional env overrides if you need a different filename, screen index, RC port, or run user (the back helper injects `--no-audio` unless you override `SCREEN1_EXTRA_ARGS`):
 
 ```bash
 sudo MEDIA_FRONT=/media/videos/custom_front.mp4 RUN_USER=pi ./scripts/install_worker_front.sh
-sudo MEDIA_BACK=/media/videos/custom_back.mp4 RUN_USER=pi ./scripts/install_worker_back.sh
+sudo MEDIA_BACK=/media/videos/custom_back.mp4 SCREEN1_EXTRA_ARGS="" RUN_USER=pi ./scripts/install_worker_back.sh
 ```
 
 Under the hood the helpers call `install_worker_units.sh`, so you can still run it directly for bespoke cases (use `--screen0-only`/`--screen1-only` plus the existing flags such as `--extra-args`, `--screen1-extra-args`, and `--xdisplay`).

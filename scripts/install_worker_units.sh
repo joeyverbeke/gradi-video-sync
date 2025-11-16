@@ -19,7 +19,7 @@ screen1_display="1"
 screen1_port="5002"
 screen1_enabled="${SCREEN1_ENABLED:-0}"
 screen0_extra_args="${SCREEN0_EXTRA_ARGS:-}"
-screen1_extra_args="${SCREEN1_EXTRA_ARGS:-}"
+screen1_extra_args="${SCREEN1_EXTRA_ARGS:---no-audio}"
 run_user="${RUN_USER:-${SUDO_USER:-pi}}"
 xdisplay=":0"
 
