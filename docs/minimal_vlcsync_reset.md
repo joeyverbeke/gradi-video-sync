@@ -40,6 +40,8 @@ Optional flags:
 
 - `--display` – change the QT screen index if HDMI ordering differs (default `0`).
 - `--rc-port` – move the RC listener off 5001 if another service already binds that port.
+- `--user` – override which Linux user runs VLC; defaults to the sudo user invoking the script (or `pi`).
+- `--xdisplay` – override the X11 display if it is not `:0`.
 
 After the script runs, `systemctl status gradi-vlc-screen0` should show VLC looping (it will sit black until the media file exists).
 

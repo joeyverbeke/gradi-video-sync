@@ -13,6 +13,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 video="/media/videos/front.mp4"
 display="0"
 rc_port="5001"
+run_user="${RUN_USER:-${SUDO_USER:-pi}}"
+xdisplay=":0"
 
 usage() {
   cat <<'EOF'
@@ -22,6 +24,8 @@ Options:
   --video PATH     Video file to loop (default: /media/videos/front.mp4)
   --display NUM    VLC fullscreen screen index (default: 0)
   --rc-port NUM    RC port to listen on (default: 5001)
+  --user NAME      System user that should own the VLC process (default: detected sudo user or pi)
+  --xdisplay DISP  X11 display to target (default: :0)
   -h, --help       Show this message
 
 Use these flags to point at the correct media for the current Pi
@@ -37,6 +41,10 @@ while [[ $# -gt 0 ]]; do
       display="$2"; shift 2;;
     --rc-port)
       rc_port="$2"; shift 2;;
+    --user)
+      run_user="$2"; shift 2;;
+    --xdisplay)
+      xdisplay="$2"; shift 2;;
     -h|--help)
       usage; exit 0;;
     *)
@@ -66,6 +74,16 @@ GRADI_VLC_RC_PORT="$rc_port"
 EOF
 }
 
+write_override() {
+  local dir="/etc/systemd/system/gradi-vlc-screen0.service.d"
+  install -d -m 755 "$dir"
+  cat >"$dir/override.conf" <<EOF
+[Service]
+User=$run_user
+Environment=DISPLAY=$xdisplay
+EOF
+}
+
 warn_if_missing "$video"
 
 log_section "Installing VLC worker dependencies"
@@ -77,6 +95,7 @@ install -Dm644 "$REPO_ROOT/systemd/gradi-vlc-screen0.service" /etc/systemd/syste
 
 log_section "Writing environment overrides"
 write_env /etc/default/gradi-vlc-screen0
+write_override
 
 log_section "Enabling services"
 systemctl daemon-reload
