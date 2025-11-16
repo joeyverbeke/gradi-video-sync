@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the single-screen VLC worker unit on a Raspberry Pi.
+# Install one or both VLC worker units on a Raspberry Pi.
 set -euo pipefail
 
 if [[ $EUID -ne 0 ]]; then
@@ -13,6 +13,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 screen0_video="/media/videos/front.mp4"
 screen0_display="0"
 screen0_port="5001"
+screen0_enabled="${SCREEN0_ENABLED:-1}"
 screen1_video="/media/videos/back.mp4"
 screen1_display="1"
 screen1_port="5002"
@@ -30,10 +31,12 @@ Options:
   --video PATH         Video file for screen 0 (default: /media/videos/front.mp4)
   --display NUM        VLC fullscreen screen index for screen 0 (default: 0)
   --rc-port NUM        RC port for screen 0 (default: 5001)
+  --screen0-only       Manage only screen 0 (skip screen 1 this run)
   --extra-args "FLAGS" Extra VLC CLI flags for screen 0 (default: none)
   --screen1-video PATH Video file for screen 1 (enables second screen; default: /media/videos/back.mp4)
   --screen1-display NUM  Screen index for screen 1 (default: 1)
   --screen1-port NUM    RC port for screen 1 (default: 5002)
+  --screen1-only       Manage only screen 1 (screen 0 untouched)
   --screen1-extra-args "FLAGS"  Extra VLC CLI flags for screen 1 (default: none)
   --user NAME      System user that should own the VLC process (default: detected sudo user or pi)
   --xdisplay DISP  X11 display to target (default: :0)
@@ -52,6 +55,10 @@ while [[ $# -gt 0 ]]; do
       screen0_display="$2"; shift 2;;
     --rc-port)
       screen0_port="$2"; shift 2;;
+    --screen0-only)
+      screen0_enabled="1"
+      screen1_enabled="0"
+      shift;;
     --extra-args)
       screen0_extra_args="$2"; shift 2;;
     --screen1-video)
@@ -60,6 +67,10 @@ while [[ $# -gt 0 ]]; do
       screen1_display="$2"; screen1_enabled=1; shift 2;;
     --screen1-port)
       screen1_port="$2"; screen1_enabled=1; shift 2;;
+    --screen1-only)
+      screen0_enabled="0"
+      screen1_enabled="1"
+      shift;;
     --screen1-extra-args)
       screen1_extra_args="$2"; screen1_enabled=1; shift 2;;
     --user)
@@ -74,6 +85,11 @@ while [[ $# -gt 0 ]]; do
       exit 1;;
   esac
 done
+
+if [[ "$screen0_enabled" != "1" && "$screen1_enabled" != "1" ]]; then
+  echo "At least one screen must be selected." >&2
+  exit 1
+fi
 
 log_section() {
   printf '\n[%s] %s\n' "$(date +'%H:%M:%S')" "$*"
@@ -111,7 +127,9 @@ Environment=DISPLAY=$xdisplay
 EOF
 }
 
-warn_if_missing "$screen0_video"
+if [[ "$screen0_enabled" == "1" ]]; then
+  warn_if_missing "$screen0_video"
+fi
 if [[ "$screen1_enabled" == "1" ]]; then
   warn_if_missing "$screen1_video"
 fi
@@ -121,14 +139,18 @@ apt-get update -y
 apt-get install -y vlc netcat-openbsd
 
 log_section "Deploying systemd unit(s)"
-install -Dm644 "$REPO_ROOT/systemd/gradi-vlc-screen0.service" /etc/systemd/system/gradi-vlc-screen0.service
+if [[ "$screen0_enabled" == "1" ]]; then
+  install -Dm644 "$REPO_ROOT/systemd/gradi-vlc-screen0.service" /etc/systemd/system/gradi-vlc-screen0.service
+fi
 if [[ "$screen1_enabled" == "1" ]]; then
   install -Dm644 "$REPO_ROOT/systemd/gradi-vlc-screen1.service" /etc/systemd/system/gradi-vlc-screen1.service
 fi
 
 log_section "Writing environment overrides"
-write_env /etc/default/gradi-vlc-screen0 "$screen0_video" "$screen0_display" "$screen0_port" "$screen0_extra_args"
-write_override "gradi-vlc-screen0"
+if [[ "$screen0_enabled" == "1" ]]; then
+  write_env /etc/default/gradi-vlc-screen0 "$screen0_video" "$screen0_display" "$screen0_port" "$screen0_extra_args"
+  write_override "gradi-vlc-screen0"
+fi
 if [[ "$screen1_enabled" == "1" ]]; then
   write_env /etc/default/gradi-vlc-screen1 "$screen1_video" "$screen1_display" "$screen1_port" "$screen1_extra_args"
   write_override "gradi-vlc-screen1"
@@ -136,20 +158,25 @@ fi
 
 log_section "Enabling services"
 systemctl daemon-reload
-if [[ "$screen1_enabled" == "1" ]]; then
-  systemctl enable --now gradi-vlc-screen0.service gradi-vlc-screen1.service
-else
+if [[ "$screen0_enabled" == "1" ]]; then
   systemctl enable --now gradi-vlc-screen0.service
-  if systemctl cat gradi-vlc-screen1.service >/dev/null 2>&1; then
-    systemctl disable --now gradi-vlc-screen1.service || true
-  fi
+fi
+if [[ "$screen1_enabled" == "1" ]]; then
+  systemctl enable --now gradi-vlc-screen1.service
 fi
 
 log_section "Active VLC RC ports"
-ports="$screen0_port"
-if [[ "$screen1_enabled" == "1" ]]; then
-  ports="$ports|$screen1_port"
+ports=()
+if [[ "$screen0_enabled" == "1" ]]; then
+  ports+=("$screen0_port")
 fi
-ss -ltnp | grep -E ":($ports)" || true
+if [[ "$screen1_enabled" == "1" ]]; then
+  ports+=("$screen1_port")
+fi
+if [[ ${#ports[@]} -gt 0 ]]; then
+  regex=$(printf '%s|' "${ports[@]}")
+  regex="(${regex%|})"
+  ss -ltnp | grep -E ":$regex" || true
+fi
 
 log_section "Worker install complete"

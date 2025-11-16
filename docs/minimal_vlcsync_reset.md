@@ -8,11 +8,11 @@ This guide resets the in-progress deployment to the minimal “two Pis, three sc
 
   | Hostname        | IP address    | Role / screens            | Expected media files |
   |-----------------|---------------|---------------------------|----------------------|
-  | `gradi-mediate` | `192.168.0.4` | Controller + HDMI 0       | `/media/videos/front.mp4` |
-  | `gradi-compress` | `192.168.0.9` | Worker + HDMI 0 & 1       | `/media/videos/back.mp4` (screen 0), `/media/videos/side.mp4` (screen 1 – name as needed) |
+  | `gradi-mediate` | `192.168.0.4` | Controller + HDMI 0 (front) | `/media/videos/front.mp4` |
+  | `gradi-compress` | `192.168.0.9` | Worker + HDMI 0 (front) & HDMI 1 (back) | `/media/videos/front.mp4` (screen 0), `/media/videos/back.mp4` (screen 1) |
 
-- **Media naming** – keep using `/media/videos/front.mp4` for the controller. On `gradi-compress`, place the two clips you want as `/media/videos/back.mp4` and `/media/videos/side.mp4` (or adjust when running the installer).
-- **RC ports** – controller screen uses TCP `5001`. `gradi-compress` exposes two RC sockets: `5001` for HDMI 0 and `5002` for HDMI 1.
+- **Media naming** – keep `/media/videos/front.mp4` for every front-facing screen (RC port 5001) and `/media/videos/back.mp4` for every back-facing screen (RC port 5002). Override via env vars if a Pi needs different filenames.
+- **RC ports** – front screens always listen on TCP `5001`, back screens on TCP `5002`.
 
 ## 1. Clean up legacy services on both Pis
 
@@ -26,29 +26,25 @@ Set `DRY_RUN=1` if you first want to see which units would be touched (`DRY_RUN=
 
 ## 2. Install the worker VLC unit
 
-Run the worker installer with the appropriate clip per Pi:
+Use the dedicated helpers so you only configure the screen you care about:
 
 ```bash
-# On gradi-mediate (controller + single screen)
-sudo ./scripts/install_worker_units.sh --video /media/videos/front.mp4
+# gradi-mediate (front screen only)
+sudo ./scripts/install_worker_front.sh
 
-# On gradi-compress (worker with two screens)
-sudo ./scripts/install_worker_units.sh \
-  --video /media/videos/back.mp4 \
-  --screen1-video /media/videos/side.mp4 \
-  --screen1-display 1 \
-  --screen1-port 5002
+# gradi-compress (two screens)
+sudo ./scripts/install_worker_front.sh   # HDMI 0 / front.mp4 / port 5001
+sudo ./scripts/install_worker_back.sh    # HDMI 1 / back.mp4 / port 5002
 ```
 
-Optional flags:
+Each helper honors optional env overrides if you need a different filename, screen index, RC port, or run user:
 
-- `--display` – change the QT screen index if HDMI ordering differs (default `0`).
-- `--rc-port` – move the RC listener off 5001 if another service already binds that port.
-- `--extra-args "FLAGS"` – append raw VLC flags (e.g., `--no-audio`) to the screen 0 service.
-- `--screen1-video` (and related `--screen1-display`, `--screen1-port`) – enable a second VLC service on the same Pi. Omit these flags on single-screen devices.
-- `--screen1-extra-args "FLAGS"` – inject custom VLC flags on the second screen; `--no-audio` is now applied on `gradi-compress` to keep HDMI 1 silent.
-- `--user` – override which Linux user runs VLC; defaults to the sudo user invoking the script (or `pi`).
-- `--xdisplay` – override the X11 display if it is not `:0`.
+```bash
+sudo MEDIA_FRONT=/media/videos/custom_front.mp4 RUN_USER=pi ./scripts/install_worker_front.sh
+sudo MEDIA_BACK=/media/videos/custom_back.mp4 RUN_USER=pi ./scripts/install_worker_back.sh
+```
+
+Under the hood the helpers call `install_worker_units.sh`, so you can still run it directly for bespoke cases (use `--screen0-only`/`--screen1-only` plus the existing flags such as `--extra-args`, `--screen1-extra-args`, and `--xdisplay`).
 
 After the script runs, `systemctl status gradi-vlc-screen0` should show VLC looping (it will sit black until the media file exists).
 
@@ -57,12 +53,16 @@ After the script runs, `systemctl status gradi-vlc-screen0` should show VLC loop
 Run the controller helper as the non-root user that should own the service (default `pi`):
 
 ```bash
+# fresh install
 ./scripts/install_controller_service.sh
+
+# redeploy after editing the host list
+./scripts/install_controller_service.sh --skip-deps
 ```
 
 The script installs `vlcsync` via `pip --user`, deploys `systemd/gradi-vlcsync-gated.user.service` into `~/.config/systemd/user`, and enables lingering so the user service stays up after logout. The service waits for all three RC sockets (`192.168.0.4:5001`, `192.168.0.9:5001`, and `192.168.0.9:5002`) to accept TCP connections before launching `vlcsync`, then sends the `stop → seek 0 → play` command burst to start every screen in lockstep.
 
-If you ever change IPs or the RC port, edit `systemd/gradi-vlcsync-gated.user.service` in the repo, redeploy it with the script, and restart the user service (`systemctl --user restart gradi-vlcsync-gated.service`).
+If you ever change IPs or add a screen, update `systemd/gradi-vlcsync-gated.user.service` in the repo, then rerun the helper (use `--skip-deps` for a fast redeploy). It will copy the file, reload the user daemon, and restart the service for you.
 
 ## 4. Boot test
 
@@ -74,5 +74,5 @@ If you ever change IPs or the RC port, edit `systemd/gradi-vlcsync-gated.user.se
 ## 5. Notes
 
 - Keep NTP enabled (`timedatectl status`) and use wired Ethernet to minimize jitter.
-- Validate HEVC decode on new SD images with `scripts/phase1_validate.sh` before running the worker installer.
-- Update `/etc/default/gradi-vlc-screen0` if you remap HDMI outputs or swap to new media files, then restart the service.
+- Validate HEVC decode on new SD images (run a quick VLC manual test) before invoking the worker installers.
+- Update `/etc/default/gradi-vlc-screen0` or `/etc/default/gradi-vlc-screen1` if you remap HDMI outputs or swap to new media files, then restart the relevant service.
