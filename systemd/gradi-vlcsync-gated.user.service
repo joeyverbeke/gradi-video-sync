@@ -6,9 +6,10 @@ Wants=network-online.target
 [Service]
 Type=simple
 Environment=HOSTS="192.168.0.4:5001 192.168.0.9:5001"
+Environment=PATH=%h/.local/bin:/usr/bin:/bin
 TimeoutStartSec=0
 ExecStartPre=/bin/bash -lc 'for ep in $HOSTS; do ip=${ep%:*}; port=${ep#*:}; until nc -z -w1 "$ip" "$port"; do sleep 0.5; done; done'
-ExecStart=/usr/bin/python3 -m vlcsync --no-local-discovery \
+ExecStart=%h/.local/bin/vlcsync --no-local-discovery \
   --rc-host 192.168.0.4:5001 \
   --rc-host 192.168.0.9:5001
 ExecStartPost=/bin/bash -lc 'cmd=$'"'"'stop\nseek 0\nplay\n'"'"'; for ep in $HOSTS; do ip=${ep%:*}; port=${ep#*:}; printf "%b" "$cmd" | nc -N "$ip" "$port" & done; wait'
