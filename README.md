@@ -24,12 +24,19 @@ Back screens (HDMI 1, RC port 5002):
 sudo ./scripts/install_worker_back.sh
 ```
 
-Run both commands on dual-screen Pis (e.g., `gradi-compress`). Each script honors env overrides (the back helper adds `--no-audio` by default):
+Run both commands on dual-screen Pis (e.g., `gradi-compress`). Each script honors env overrides, including audio routing via `AUDIO_DEVICE`, `SCREEN0_AUDIO_DEVICE`, or `SCREEN1_AUDIO_DEVICE`. **Pass those vars inside the sudo command** so the installer can see them.
+
+How to pick the right audio device:
+1. Plug in the speaker/headphones, then run `aplay -L`.
+2. In that output, find the block whose description matches your hardware and copy the `plughw:...` or `dmix:...` line.
+3. Use that value in the installer command, e.g.:
 
 ```bash
-sudo MEDIA_FRONT=/media/videos/custom_front.mp4 RUN_USER=pi ./scripts/install_worker_front.sh
-sudo MEDIA_BACK=/media/videos/custom_back.mp4 SCREEN1_EXTRA_ARGS="" RUN_USER=pi ./scripts/install_worker_back.sh
+sudo AUDIO_DEVICE=dmix:CARD=ATHM50xSTSUSB,DEV=0 MEDIA_FRONT=/media/videos/custom_front.mp4 RUN_USER=pi ./scripts/install_worker_front.sh
+sudo SCREEN1_AUDIO_DEVICE=dmix:CARD=ATHM50xSTSUSB,DEV=0 MEDIA_BACK=/media/videos/custom_back.mp4 RUN_USER=pi ./scripts/install_worker_back.sh
 ```
+
+To change audio later, rerun the relevant installer with the new ALSA device value (or edit `/etc/default/gradi-vlc-screen*` and restart the matching service).
 
 Reboot and confirm the RC ports are listening:
 

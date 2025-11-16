@@ -37,11 +37,11 @@ sudo ./scripts/install_worker_front.sh   # HDMI 0 / front.mp4 / port 5001
 sudo ./scripts/install_worker_back.sh    # HDMI 1 / back.mp4 / port 5002
 ```
 
-Each helper honors optional env overrides if you need a different filename, screen index, RC port, or run user (the back helper injects `--no-audio` unless you override `SCREEN1_EXTRA_ARGS`):
+Each helper honors optional env overrides if you need a different filename, screen index, RC port, run user, **or audio target**. Set one of `AUDIO_DEVICE`, `SCREEN0_AUDIO_DEVICE`, or `SCREEN1_AUDIO_DEVICE` to an ALSA/Pulse endpoint (e.g., `dmix:CARD=ATHM50xSTSUSB,DEV=0` for the USB headset currently plugged into `gradi-compress`) so both VLC workers can feed the same speaker:
 
 ```bash
-sudo MEDIA_FRONT=/media/videos/custom_front.mp4 RUN_USER=pi ./scripts/install_worker_front.sh
-sudo MEDIA_BACK=/media/videos/custom_back.mp4 SCREEN1_EXTRA_ARGS="" RUN_USER=pi ./scripts/install_worker_back.sh
+AUDIO_DEVICE=dmix:CARD=ATHM50xSTSUSB,DEV=0 sudo MEDIA_FRONT=/media/videos/custom_front.mp4 RUN_USER=pi ./scripts/install_worker_front.sh
+SCREEN1_AUDIO_DEVICE=dmix:CARD=ATHM50xSTSUSB,DEV=0 sudo MEDIA_BACK=/media/videos/custom_back.mp4 RUN_USER=pi ./scripts/install_worker_back.sh
 ```
 
 Under the hood the helpers call `install_worker_units.sh`, so you can still run it directly for bespoke cases (use `--screen0-only`/`--screen1-only` plus the existing flags such as `--extra-args`, `--screen1-extra-args`, and `--xdisplay`).
@@ -75,4 +75,4 @@ If you ever change IPs or add a screen, update `systemd/gradi-vlcsync-gated.user
 
 - Keep NTP enabled (`timedatectl status`) and use wired Ethernet to minimize jitter.
 - Validate HEVC decode on new SD images (run a quick VLC manual test) before invoking the worker installers.
-- Update `/etc/default/gradi-vlc-screen0` or `/etc/default/gradi-vlc-screen1` if you remap HDMI outputs or swap to new media files, then restart the relevant service.
+- Update `/etc/default/gradi-vlc-screen0` or `/etc/default/gradi-vlc-screen1` if you remap HDMI outputs, swap to new media files, or point VLC at a different speaker. Restart the relevant service after editing.
