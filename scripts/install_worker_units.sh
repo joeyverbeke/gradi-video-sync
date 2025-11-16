@@ -10,9 +10,13 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-video="/media/videos/front.mp4"
-display="0"
-rc_port="5001"
+screen0_video="/media/videos/front.mp4"
+screen0_display="0"
+screen0_port="5001"
+screen1_video="/media/videos/back.mp4"
+screen1_display="1"
+screen1_port="5002"
+screen1_enabled="${SCREEN1_ENABLED:-0}"
 run_user="${RUN_USER:-${SUDO_USER:-pi}}"
 xdisplay=":0"
 
@@ -21,9 +25,12 @@ usage() {
 Usage: sudo ./scripts/install_worker_units.sh [options]
 
 Options:
-  --video PATH     Video file to loop (default: /media/videos/front.mp4)
-  --display NUM    VLC fullscreen screen index (default: 0)
-  --rc-port NUM    RC port to listen on (default: 5001)
+  --video PATH         Video file for screen 0 (default: /media/videos/front.mp4)
+  --display NUM        VLC fullscreen screen index for screen 0 (default: 0)
+  --rc-port NUM        RC port for screen 0 (default: 5001)
+  --screen1-video PATH Video file for screen 1 (enables second screen; default: /media/videos/back.mp4)
+  --screen1-display NUM  Screen index for screen 1 (default: 1)
+  --screen1-port NUM    RC port for screen 1 (default: 5002)
   --user NAME      System user that should own the VLC process (default: detected sudo user or pi)
   --xdisplay DISP  X11 display to target (default: :0)
   -h, --help       Show this message
@@ -36,11 +43,17 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --video)
-      video="$2"; shift 2;;
+      screen0_video="$2"; shift 2;;
     --display)
-      display="$2"; shift 2;;
+      screen0_display="$2"; shift 2;;
     --rc-port)
-      rc_port="$2"; shift 2;;
+      screen0_port="$2"; shift 2;;
+    --screen1-video)
+      screen1_video="$2"; screen1_enabled=1; shift 2;;
+    --screen1-display)
+      screen1_display="$2"; screen1_enabled=1; shift 2;;
+    --screen1-port)
+      screen1_port="$2"; screen1_enabled=1; shift 2;;
     --user)
       run_user="$2"; shift 2;;
     --xdisplay)
@@ -67,15 +80,19 @@ warn_if_missing() {
 
 write_env() {
   local path="$1"
+  local video="$2"
+  local display="$3"
+  local port="$4"
   cat >"$path" <<EOF
 GRADI_VLC_VIDEO="$video"
 GRADI_VLC_DISPLAY="$display"
-GRADI_VLC_RC_PORT="$rc_port"
+GRADI_VLC_RC_PORT="$port"
 EOF
 }
 
 write_override() {
-  local dir="/etc/systemd/system/gradi-vlc-screen0.service.d"
+  local service="$1"
+  local dir="/etc/systemd/system/${service}.service.d"
   install -d -m 755 "$dir"
   cat >"$dir/override.conf" <<EOF
 [Service]
@@ -84,24 +101,45 @@ Environment=DISPLAY=$xdisplay
 EOF
 }
 
-warn_if_missing "$video"
+warn_if_missing "$screen0_video"
+if [[ "$screen1_enabled" == "1" ]]; then
+  warn_if_missing "$screen1_video"
+fi
 
 log_section "Installing VLC worker dependencies"
 apt-get update -y
 apt-get install -y vlc netcat-openbsd
 
-log_section "Deploying systemd unit"
+log_section "Deploying systemd unit(s)"
 install -Dm644 "$REPO_ROOT/systemd/gradi-vlc-screen0.service" /etc/systemd/system/gradi-vlc-screen0.service
+if [[ "$screen1_enabled" == "1" ]]; then
+  install -Dm644 "$REPO_ROOT/systemd/gradi-vlc-screen1.service" /etc/systemd/system/gradi-vlc-screen1.service
+fi
 
 log_section "Writing environment overrides"
-write_env /etc/default/gradi-vlc-screen0
-write_override
+write_env /etc/default/gradi-vlc-screen0 "$screen0_video" "$screen0_display" "$screen0_port"
+write_override "gradi-vlc-screen0"
+if [[ "$screen1_enabled" == "1" ]]; then
+  write_env /etc/default/gradi-vlc-screen1 "$screen1_video" "$screen1_display" "$screen1_port"
+  write_override "gradi-vlc-screen1"
+fi
 
 log_section "Enabling services"
 systemctl daemon-reload
-systemctl enable --now gradi-vlc-screen0.service
+if [[ "$screen1_enabled" == "1" ]]; then
+  systemctl enable --now gradi-vlc-screen0.service gradi-vlc-screen1.service
+else
+  systemctl enable --now gradi-vlc-screen0.service
+  if systemctl cat gradi-vlc-screen1.service >/dev/null 2>&1; then
+    systemctl disable --now gradi-vlc-screen1.service || true
+  fi
+fi
 
 log_section "Active VLC RC ports"
-ss -ltnp | grep -E ":${rc_port}" || true
+ports="$screen0_port"
+if [[ "$screen1_enabled" == "1" ]]; then
+  ports="$ports|$screen1_port"
+fi
+ss -ltnp | grep -E ":($ports)" || true
 
 log_section "Worker install complete"

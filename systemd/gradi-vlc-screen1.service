@@ -1,0 +1,17 @@
+[Unit]
+Description=Gradi VLC fullscreen on Screen 1 (RC:5002)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=GRADI_VLC_VIDEO=/media/videos/back.mp4
+Environment=GRADI_VLC_RC_PORT=5002
+Environment=GRADI_VLC_DISPLAY=1
+EnvironmentFile=-/etc/default/gradi-vlc-screen1
+ExecStart=/bin/bash -lc 'exec /usr/bin/vlc --fullscreen --no-video-title-show --loop --extraintf rc --rc-host 0.0.0.0:"${GRADI_VLC_RC_PORT}" --qt-fullscreen-screennumber="${GRADI_VLC_DISPLAY}" "${GRADI_VLC_VIDEO}"'
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
