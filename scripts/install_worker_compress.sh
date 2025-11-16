@@ -7,8 +7,9 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 ./scripts/install_worker_units.sh \
-  --video /media/videos/back.mp4 \
-  --screen1-video /media/videos/side.mp4 \
+  --video /media/videos/front.mp4 \
+  --screen1-video /media/videos/back.mp4 \
   --screen1-display 1 \
   --screen1-port 5002 \
+  --screen1-extra-args "--no-audio" \
   --user joeyverbeke

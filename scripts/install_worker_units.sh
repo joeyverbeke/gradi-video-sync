@@ -17,6 +17,8 @@ screen1_video="/media/videos/back.mp4"
 screen1_display="1"
 screen1_port="5002"
 screen1_enabled="${SCREEN1_ENABLED:-0}"
+screen0_extra_args="${SCREEN0_EXTRA_ARGS:-}"
+screen1_extra_args="${SCREEN1_EXTRA_ARGS:-}"
 run_user="${RUN_USER:-${SUDO_USER:-pi}}"
 xdisplay=":0"
 
@@ -28,9 +30,11 @@ Options:
   --video PATH         Video file for screen 0 (default: /media/videos/front.mp4)
   --display NUM        VLC fullscreen screen index for screen 0 (default: 0)
   --rc-port NUM        RC port for screen 0 (default: 5001)
+  --extra-args "FLAGS" Extra VLC CLI flags for screen 0 (default: none)
   --screen1-video PATH Video file for screen 1 (enables second screen; default: /media/videos/back.mp4)
   --screen1-display NUM  Screen index for screen 1 (default: 1)
   --screen1-port NUM    RC port for screen 1 (default: 5002)
+  --screen1-extra-args "FLAGS"  Extra VLC CLI flags for screen 1 (default: none)
   --user NAME      System user that should own the VLC process (default: detected sudo user or pi)
   --xdisplay DISP  X11 display to target (default: :0)
   -h, --help       Show this message
@@ -48,12 +52,16 @@ while [[ $# -gt 0 ]]; do
       screen0_display="$2"; shift 2;;
     --rc-port)
       screen0_port="$2"; shift 2;;
+    --extra-args)
+      screen0_extra_args="$2"; shift 2;;
     --screen1-video)
       screen1_video="$2"; screen1_enabled=1; shift 2;;
     --screen1-display)
       screen1_display="$2"; screen1_enabled=1; shift 2;;
     --screen1-port)
       screen1_port="$2"; screen1_enabled=1; shift 2;;
+    --screen1-extra-args)
+      screen1_extra_args="$2"; screen1_enabled=1; shift 2;;
     --user)
       run_user="$2"; shift 2;;
     --xdisplay)
@@ -83,10 +91,12 @@ write_env() {
   local video="$2"
   local display="$3"
   local port="$4"
+  local extra="$5"
   cat >"$path" <<EOF
 GRADI_VLC_VIDEO="$video"
 GRADI_VLC_DISPLAY="$display"
 GRADI_VLC_RC_PORT="$port"
+GRADI_VLC_EXTRA_FLAGS="$extra"
 EOF
 }
 
@@ -117,10 +127,10 @@ if [[ "$screen1_enabled" == "1" ]]; then
 fi
 
 log_section "Writing environment overrides"
-write_env /etc/default/gradi-vlc-screen0 "$screen0_video" "$screen0_display" "$screen0_port"
+write_env /etc/default/gradi-vlc-screen0 "$screen0_video" "$screen0_display" "$screen0_port" "$screen0_extra_args"
 write_override "gradi-vlc-screen0"
 if [[ "$screen1_enabled" == "1" ]]; then
-  write_env /etc/default/gradi-vlc-screen1 "$screen1_video" "$screen1_display" "$screen1_port"
+  write_env /etc/default/gradi-vlc-screen1 "$screen1_video" "$screen1_display" "$screen1_port" "$screen1_extra_args"
   write_override "gradi-vlc-screen1"
 fi
 

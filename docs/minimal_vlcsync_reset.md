@@ -44,7 +44,9 @@ Optional flags:
 
 - `--display` – change the QT screen index if HDMI ordering differs (default `0`).
 - `--rc-port` – move the RC listener off 5001 if another service already binds that port.
+- `--extra-args "FLAGS"` – append raw VLC flags (e.g., `--no-audio`) to the screen 0 service.
 - `--screen1-video` (and related `--screen1-display`, `--screen1-port`) – enable a second VLC service on the same Pi. Omit these flags on single-screen devices.
+- `--screen1-extra-args "FLAGS"` – inject custom VLC flags on the second screen; `--no-audio` is now applied on `gradi-compress` to keep HDMI 1 silent.
 - `--user` – override which Linux user runs VLC; defaults to the sudo user invoking the script (or `pi`).
 - `--xdisplay` – override the X11 display if it is not `:0`.
 
