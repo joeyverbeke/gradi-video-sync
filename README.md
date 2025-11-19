@@ -32,8 +32,8 @@ How to pick the right audio device:
 3. Use that value in the installer command, e.g.:
 
 ```bash
-sudo AUDIO_DEVICE=dmix:CARD=ATHM50xSTSUSB,DEV=0 MEDIA_FRONT=/media/videos/custom_front.mp4 RUN_USER=pi ./scripts/install_worker_front.sh
-sudo SCREEN1_AUDIO_DEVICE=dmix:CARD=ATHM50xSTSUSB,DEV=0 MEDIA_BACK=/media/videos/custom_back.mp4 RUN_USER=pi ./scripts/install_worker_back.sh
+sudo AUDIO_DEVICE=dmix:CARD=GVAUDIO,DEV=0 MEDIA_FRONT=/media/videos/front.mp4 ./scripts/install_worker_front.sh
+sudo SCREEN1_AUDIO_DEVICE=dmix:CARD=GVAUDIO,DEV=0 MEDIA_BACK=/media/videos/back.mp4 ./scripts/install_worker_back.sh
 ```
 
 To change audio later, rerun the relevant installer with the new ALSA device value (or edit `/etc/default/gradi-vlc-screen*` and restart the matching service).
